@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CheckInIQ — Reset Password</title>
+<link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Satoshi',system-ui,sans-serif;
+  background:#03060f; color:#f0f4ff;
+  min-height:100vh; display:flex;
+  align-items:center; justify-content:center;
+}
+.card {
+  background:rgba(8,16,36,0.9);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px; padding:40px;
+  width:100%; max-width:400px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.6);
+}
+h2 { font-size:1.6rem; font-weight:800; margin-bottom:8px; }
+h2 em { color:#6b9aff; font-style:normal; }
+p { font-size:0.88rem; color:rgba(150,170,220,0.7); margin-bottom:24px; }
+input {
+  width:100%; padding:14px 16px; margin-bottom:14px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px; font-size:0.9rem;
+  color:#f0f4ff; outline:none;
+  font-family:'Satoshi',sans-serif;
+  transition:border-color 0.2s;
+}
+input:focus { border-color:rgba(107,154,255,0.5); }
+input::placeholder { color:rgba(150,170,220,0.5); }
+button {
+  width:100%; padding:14px;
+  background:linear-gradient(135deg,#3b5ff7,#6366f1);
+  border:none; border-radius:10px;
+  font-size:0.95rem; font-weight:700;
+  color:#fff; cursor:pointer;
+  font-family:'Satoshi',sans-serif;
+  box-shadow:0 4px 20px rgba(99,102,241,0.4);
+  transition:transform 0.2s;
+}
+button:hover { transform:translateY(-2px); }
+.msg { margin-top:16px; padding:12px; border-radius:8px; font-size:0.85rem; text-align:center; display:none; }
+.msg.success { background:rgba(16,217,122,0.1); color:#10d97a; border:1px solid rgba(16,217,122,0.2); }
+.msg.error   { background:rgba(255,82,82,0.1);  color:#ff5252;  border:1px solid rgba(255,82,82,0.2); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>CheckIn<em>IQ</em></h2>
+  <p id="subtitle">Enter your new password below.</p>
+  <input type="password" id="new-pass" placeholder="New Password">
+  <input type="password" id="confirm-pass" placeholder="Confirm Password">
+  <button onclick="submitReset()">Set New Password</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+// get token from URL
+const token = new URLSearchParams(window.location.search).get('token');
+
+if (!token) {
+  document.getElementById('subtitle').textContent = 'Invalid reset link.';
+  document.querySelector('button').disabled = true;
+}
+
+async function submitReset() {
+  const pass    = document.getElementById('new-pass').value;
+  const confirm = document.getElementById('confirm-pass').value;
+  const msg     = document.getElementById('msg');
+
+  if (!pass || pass.length < 6) {
+    showMsg('Password must be at least 6 characters', 'error'); return;
+  }
+  if (pass !== confirm) {
+    showMsg('Passwords do not match', 'error'); return;
+  }
+
+  try {
+    const res  = await fetch('/api/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password: pass })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showMsg('✅ Password reset! Redirecting to login…', 'success');
+      setTimeout(() => window.location.href = '/', 2000);
+    } else {
+      showMsg(data.error || 'Something went wrong', 'error');
+    }
+  } catch(err) {
+    showMsg('❌ Server not reachable', 'error');
+  }
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>

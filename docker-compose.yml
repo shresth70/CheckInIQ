@@ -1,0 +1,27 @@
+services:
+  app:
+    image: ${IMAGE_checkiniq}
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "6036:5000"
+    volumes:
+      - checkiniq-data:/app/data
+      - checkiniq-uploads:/app/static/uploads
+    shm_size: 1gb
+    networks:
+      - internal-common
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2g
+
+volumes:
+  checkiniq-data:
+  checkiniq-uploads:
+
+networks:
+  internal-common:
+    external: true

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>CheckIn IQ — Live Check-in Log</title>
+<style>
+  :root{
+    --bg:#0b0e1a; --card:#131729; --border:#232a45; --text:#eef1ff; --muted:#8891b0;
+    --blue:#4a7cff; --green:#10d97a; --amber:#ffb830; --red:#ff5252;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Inter,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    padding:16px;
+  }
+  .wrap{ max-width:640px; margin:0 auto; }
+  header{ text-align:center; margin-bottom:16px; }
+  header .brand{
+    font-size:0.75rem; letter-spacing:0.08em; color:var(--muted); text-transform:uppercase;
+  }
+  header h1{ font-size:1.2rem; margin:4px 0 2px; }
+  header .sub{ font-size:0.78rem; color:var(--muted); }
+
+  .banner{
+    padding:10px 14px; border-radius:10px; font-size:0.8rem; text-align:center;
+    margin-bottom:14px; display:none;
+  }
+  .banner.show{ display:block; }
+  .banner.warn{
+    background:rgba(255,82,82,0.12); color:var(--red); border:1px solid rgba(255,82,82,0.3);
+  }
+
+  .stats{ display:flex; gap:8px; margin-bottom:14px; }
+  .stat{
+    flex:1; padding:12px; border-radius:10px; text-align:center; border:1px solid var(--border);
+  }
+  .stat .num{ font-size:1.3rem; font-weight:800; }
+  .stat .lbl{ font-size:0.68rem; color:var(--muted); margin-top:2px; }
+  .stat.total{ background:rgba(74,124,255,0.07); border-color:rgba(74,124,255,0.15); }
+  .stat.in{ background:rgba(16,217,122,0.07); border-color:rgba(16,217,122,0.15); }
+  .stat.in .num{ color:var(--green); }
+  .stat.pending{ background:rgba(255,184,48,0.07); border-color:rgba(255,184,48,0.15); }
+  .stat.pending .num{ color:var(--amber); }
+
+  .toolbar{
+    display:flex; gap:8px; margin-bottom:12px; align-items:center;
+  }
+  .toolbar input{
+    flex:1; padding:10px 12px; border-radius:9px; border:1px solid var(--border);
+    background:#0d1126; color:var(--text); font-size:0.82rem; font-family:inherit;
+  }
+  .toolbar input:focus{ outline:none; border-color:var(--blue); }
+  .live-dot{
+    width:8px; height:8px; border-radius:50%; background:var(--green);
+    display:inline-block; margin-right:5px; animation:pulse 1.6s infinite;
+  }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  .live-label{ font-size:0.7rem; color:var(--muted); white-space:nowrap; }
+
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    overflow:hidden; margin-bottom:14px;
+  }
+  .guest-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .guest-row:last-child{ border-bottom:none; }
+  .gname{ font-size:0.83rem; font-weight:600; }
+  .gemail{ font-size:0.7rem; color:var(--muted); }
+  .gtime{ font-size:0.66rem; color:var(--muted); margin-top:2px; }
+  .chip{
+    font-size:0.68rem; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap;
+  }
+  .chip-in{ background:rgba(16,217,122,0.15); color:var(--green); }
+  .chip-pending{ background:rgba(255,184,48,0.15); color:var(--amber); }
+
+  .hint{ font-size:0.75rem; color:var(--muted); text-align:center; padding:24px; }
+  .hidden{ display:none !important; }
+  .footer-note{
+    font-size:0.68rem; color:var(--muted); text-align:center; margin-top:6px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">CheckIn IQ — Live Check-in Log</div>
+    <h1 id="event-name">Loading event…</h1>
+    <div class="sub" id="event-meta"></div>
+  </header>
+
+  <div class="banner warn" id="error-banner"></div>
+
+  <div class="stats">
+    <div class="stat total">
+      <div class="num" id="stat-total">0</div>
+      <div class="lbl">Total Guests</div>
+    </div>
+    <div class="stat in">
+      <div class="num" id="stat-in">0</div>
+      <div class="lbl">Checked In</div>
+    </div>
+    <div class="stat pending">
+      <div class="num" id="stat-pending">0</div>
+      <div class="lbl">Pending</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input id="search-box" placeholder="Filter by name or email…" oninput="renderList()">
+    <span class="live-label"><span class="live-dot"></span>Live</span>
+  </div>
+
+  <div class="card" id="list-card">
+    <div id="guest-list"><div class="hint">Loading guests…</div></div>
+  </div>
+
+  <div class="footer-note">Updates automatically every few seconds — keep this page open at the desk.</div>
+
+</div>
+
+<script>
+const parts   = location.pathname.split('/').filter(Boolean);
+const EVENT_ID = parseInt(parts[2], 10);
+const TOKEN    = parts[3];
+
+let allGuests = [];
+let firstLoad = true;
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const then = new Date(ts.replace(' ', 'T'));
+  const diffSec = Math.max(0, Math.floor((Date.now() - then.getTime()) / 1000));
+  if (diffSec < 60) return 'just now';
+  if (diffSec < 3600) return Math.floor(diffSec / 60) + 'm ago';
+  if (diffSec < 86400) return Math.floor(diffSec / 3600) + 'h ago';
+  return then.toLocaleString();
+}
+
+function escapeHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function renderList() {
+  const q = document.getElementById('search-box').value.trim().toLowerCase();
+  const listEl = document.getElementById('guest-list');
+
+  const filtered = q
+    ? allGuests.filter(g =>
+        g.name.toLowerCase().includes(q) || g.email.toLowerCase().includes(q))
+    : allGuests;
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="hint">No guests match.</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(g => {
+    const chip = g.status === 'checked_in'
+      ? `<span class="chip chip-in">Checked In</span>`
+      : `<span class="chip chip-pending">Pending</span>`;
+    const time = g.status === 'checked_in'
+      ? `<div class="gtime">✓ ${timeAgo(g.checked_in_at)}</div>`
+      : '';
+    return `<div class="guest-row">
+      <div>
+        <div class="gname">${escapeHtml(g.name)}</div>
+        <div class="gemail">${escapeHtml(g.email)}</div>
+        ${time}
+      </div>
+      ${chip}
+    </div>`;
+  }).join('');
+}
+
+async function refresh() {
+  try {
+    const res = await fetch(
+      `/api/team/checkins?event_id=${EVENT_ID}&token=${encodeURIComponent(TOKEN)}`
+    );
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      document.getElementById('event-name').textContent = 'Invalid link';
+      document.getElementById('event-meta').textContent = 'Ask the organizer to generate a new team link.';
+      const banner = document.getElementById('error-banner');
+      banner.textContent = data.error || 'Could not load this event';
+      banner.classList.add('show');
+      return;
+    }
+
+    document.getElementById('event-name').textContent = data.name;
+    document.getElementById('event-meta').textContent =
+      [data.date, data.location].filter(Boolean).join(' • ');
+
+    document.getElementById('stat-total').textContent   = data.total_guests;
+    document.getElementById('stat-in').textContent      = data.checked_in;
+    document.getElementById('stat-pending').textContent = data.pending;
+
+    allGuests = data.guests || [];
+    renderList();
+  } catch (e) {
+    console.error('Live log refresh error:', e);
+    if (firstLoad) {
+      document.getElementById('event-name').textContent = 'Could not load event';
+      document.getElementById('event-meta').textContent = 'Server not reachable';
+    }
+  } finally {
+    firstLoad = false;
+  }
+}
+
+refresh();
+setInterval(refresh, 4000);
+</script>
+</body>
+</html>

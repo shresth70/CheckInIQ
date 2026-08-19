@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CheckInIQ — Smart Event Check-Ins</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Satoshi:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #03060f;
+  --surface: rgba(255,255,255,0.03);
+  --glass: rgba(255,255,255,0.05);
+  --glass-border: rgba(255,255,255,0.08);
+  --blue: #4a7cff;
+  --blue-bright: #6b9aff;
+  --indigo: #6366f1;
+  --cyan: #06b6d4;
+  --white: #f0f4ff;
+  --muted: rgba(160,180,220,0.6);
+  --green: #10d97a;
+  --amber: #ffb830;
+  --red: #ff5252;
+  --sidebar-w: 158px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* Custom cursor */
+#cursor {
+  position: fixed;
+  width: 10px; height: 10px;
+  background: var(--blue-bright);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.15s ease;
+  mix-blend-mode: screen;
+}
+#cursor-ring {
+  position: fixed;
+  width: 36px; height: 36px;
+  border: 1.5px solid rgba(107,154,255,0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transition: transform 0.08s ease, width 0.3s, height 0.3s, border-color 0.3s;
+}
+body:has(a:hover,button:hover,.cta:hover) #cursor { transform: scale(2.5); }
+body:has(a:hover,button:hover,.cta:hover) #cursor-ring { width: 52px; height: 52px; border-color: rgba(107,154,255,0.3); }
+
+/* Particle canvas */
+#canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ambient orbs */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.orb-1 { width: 600px; height: 600px; background: #1a3aff; top: -200px; right: -100px; animation-delay: 0s; }
+.orb-2 { width: 400px; height: 400px; background: #6b21a8; bottom: 0; left: -100px; animation-delay: -6s; }
+.orb-3 { width: 300px; height: 300px; background: #0891b2; top: 40%; left: 40%; animation-delay: -12s; }
+@keyframes drift {
+  from { transform: translate(0,0) scale(1); }
+  to   { transform: translate(40px,30px) scale(1.05); }
+}
+
+/* Noise texture overlay */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 52px;
+  background: rgba(3,6,15,0.5);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.logo {
+  display: flex; align-items: center; gap: 11px;
+  text-decoration: none;
+}
+.logo-mark {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #3b5ff7, #6366f1);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800; color: #fff;
+  box-shadow: 0 0 20px rgba(99,102,241,0.5);
+  position: relative;
+}
+.logo-mark::after {
+  content: '';
+  position: absolute; inset: -1px;
+  border-radius: 11px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.logo-name {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 1.2rem; font-weight: 700; color: var(--white);
+  letter-spacing: -0.3px;
+}
+.logo-name em { color: var(--blue-bright); font-style: normal; }
+
+.nav-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 20px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 100px;
+  font-size: 0.83rem; color: rgba(180,200,255,0.8);
+  backdrop-filter: blur(12px);
+  letter-spacing: 0.01em;
+}
+.nav-dot {
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: blink 2.5s ease-in-out infinite;
+}
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 430px 1fr;
+  align-items: center;
+  gap: 0;
+  padding: 110px 52px 60px;
+  max-width: 1380px;
+  margin: 0 auto;
+}
+
+/* ── LEFT ── */
+.hero-left { padding-right: 20px; }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  background: rgba(74,124,255,0.08);
+  border: 1px solid rgba(74,124,255,0.2);
+  border-radius: 100px;
+  font-size: 0.75rem; font-weight: 500;
+  color: var(--blue-bright);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 28px;
+  animation: fadeUp 0.7s 0.1s both;
+}
+
+.welcome {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 1rem; font-weight: 400;
+  color: var(--muted);
+  margin-bottom: 4px;
+  animation: fadeUp 0.7s 0.15s both;
+}
+
+h1 {
+  font-family: 'Satoshi', sans-serif;
+  font-size: clamp(3.8rem, 6vw, 5rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -3px;
+  margin-bottom: 16px;
+  animation: fadeUp 0.7s 0.2s both;
+}
+h1 .grad {
+  background: linear-gradient(110deg, #fff 20%, #6b9aff 55%, #a78bfa 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sub-headline {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 1.25rem; font-weight: 600;
+  color: var(--blue-bright);
+  margin-bottom: 18px;
+  line-height: 1.3;
+  animation: fadeUp 0.7s 0.25s both;
+}
+
+.description {
+  font-size: 0.96rem; color: var(--muted);
+  line-height: 1.8;
+  max-width: 380px;
+  margin-bottom: 40px;
+  animation: fadeUp 0.7s 0.3s both;
+}
+
+/* Feature grid */
+.features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 44px;
+  animation: fadeUp 0.7s 0.35s both;
+}
+.feat {
+  display: flex; gap: 13px; align-items: flex-start;
+  padding: 14px 16px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  transition: border-color 0.3s, background 0.3s, transform 0.25s;
+}
+.feat:hover {
+  border-color: rgba(74,124,255,0.3);
+  background: rgba(74,124,255,0.07);
+  transform: translateY(-2px);
+}
+.feat-ico {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: rgba(74,124,255,0.12);
+  border: 1px solid rgba(74,124,255,0.18);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+}
+.feat h4 { font-size: 0.82rem; font-weight: 600; margin-bottom: 3px; color: var(--white); }
+.feat p { font-size: 0.74rem; color: var(--muted); line-height: 1.5; }
+
+/* CTA */
+.cta-row { display: flex; align-items: center; gap: 18px; animation: fadeUp 0.7s 0.4s both; }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, #3b5ff7 0%, #6366f1 50%, #7c3aed 100%);
+  border-radius: 100px;
+  font-size: 1rem; font-weight: 700;
+  color: #fff; border: none; cursor: none;
+  box-shadow: 0 4px 30px rgba(99,102,241,0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative; overflow: hidden;
+  text-decoration: none;
+  font-family: 'Satoshi', sans-serif;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute; top: -50%; left: -60%;
+  width: 60%; height: 200%;
+  background: rgba(255,255,255,0.12);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+}
+.btn-primary:hover::before { left: 120%; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(99,102,241,0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
+.arrow-circle {
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+.stat-trio {
+  display: flex; gap: 20px;
+}
+.stat-trio-item { text-align: center; }
+.stat-trio-num { font-size: 1.3rem; font-weight: 800; color: var(--white); display: block; }
+.stat-trio-label { font-size: 0.68rem; color: var(--muted); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── RIGHT: Dashboard ── */
+.hero-right {
+  position: relative;
+  animation: fadeUp 0.9s 0.3s both;
+}
+
+/* Floating glow behind dashboard */
+.hero-right::before {
+  content: '';
+  position: absolute;
+  inset: -60px -40px -40px -20px;
+  background: radial-gradient(ellipse at 60% 40%, rgba(74,124,255,0.12) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.dash-shell {
+  background: rgba(8,16,36,0.7);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  overflow: hidden;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 30px 80px rgba(0,0,0,0.7),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  position: relative;
+}
+
+/* Shimmer top edge */
+.dash-shell::before {
+  content: '';
+  position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(107,154,255,0.6), transparent);
+}
+
+/* ── Dash topbar ── */
+.dash-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 20px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dash-brand {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.85rem; font-weight: 700; color: var(--white);
+}
+.dash-brand-ico {
+  width: 22px; height: 22px; background: #3b5ff7;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 900; color: #fff;
+}
+.dash-brand em { color: var(--blue-bright); font-style: normal; }
+
+.dash-create {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px;
+  background: linear-gradient(135deg, #3b5ff7, #6366f1);
+  border-radius: 8px;
+  font-size: 0.75rem; font-weight: 600; color: #fff;
+  box-shadow: 0 2px 12px rgba(99,102,241,0.4);
+}
+
+/* ── Dash body ── */
+.dash-body {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+}
+
+/* Sidebar */
+.dash-sidebar {
+  background: rgba(255,255,255,0.015);
+  border-right: 1px solid rgba(255,255,255,0.05);
+  padding: 12px 0;
+  display: flex; flex-direction: column;
+  min-height: 490px;
+}
+
+.dash-nav { display: flex; flex-direction: column; gap: 1px; flex: 1; }
+
+.dnav {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 16px;
+  font-size: 0.75rem; color: rgba(130,160,210,0.6);
+  cursor: none; border-radius: 0;
+  transition: all 0.2s;
+  position: relative;
+}
+.dnav.active {
+  color: #fff; background: rgba(74,124,255,0.15);
+  font-weight: 600;
+}
+.dnav.active::before {
+  content: '';
+  position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 3px; background: var(--blue);
+  border-radius: 0 3px 3px 0;
+}
+.dnav:hover:not(.active) { color: rgba(180,210,255,0.8); background: rgba(255,255,255,0.03); }
+.dnav-ico { font-size: 14px; opacity: 0.8; }
+
+.dash-logout {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* ── Main content ── */
+.dash-main { padding: 14px; overflow: hidden; }
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stat-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 11px;
+  padding: 11px 13px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  transition: border-color 0.2s, background 0.2s;
+}
+.stat-card:hover { border-color: rgba(74,124,255,0.25); background: rgba(74,124,255,0.05); }
+
+.sc-label { font-size: 0.6rem; color: rgba(130,160,210,0.6); margin-bottom: 5px; }
+.sc-val { font-size: 1.35rem; font-weight: 800; line-height: 1; margin-bottom: 3px; }
+.sc-sub { font-size: 0.58rem; color: rgba(130,160,210,0.5); }
+.sc-sub.g { color: var(--green); }
+.sc-sub.o { color: var(--amber); }
+.sc-ico { font-size: 17px; opacity: 0.6; }
+
+/* Mid: chart + activity */
+.dash-mid {
+  display: grid;
+  grid-template-columns: 1fr 172px;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.chart-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 11px;
+  padding: 13px;
+}
+.chart-card-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.chart-card-hdr span { font-size: 0.73rem; font-weight: 600; }
+.week-btn {
+  font-size: 0.62rem; color: rgba(160,190,230,0.7);
+  padding: 3px 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  background: transparent;
+  cursor: none;
+  color: rgba(200,220,255,0.8);
+}
+
+/* SVG chart */
+.chart-svg { width: 100%; height: 100px; }
+
+.xlabels {
+  display: flex; justify-content: space-between;
+  padding: 0 2px; margin-top: 4px;
+}
+.xlabels span { font-size: 0.55rem; color: rgba(80,110,160,0.7); }
+
+/* Activity */
+.act-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 11px;
+  padding: 13px;
+}
+.act-card h4 { font-size: 0.7rem; font-weight: 600; margin-bottom: 11px; }
+
+.act-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.avatar {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fff;
+}
+.act-info { flex: 1; min-width: 0; }
+.act-name { font-size: 0.67rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-st { font-size: 0.58rem; color: rgba(80,120,180,0.7); }
+.act-time { font-size: 0.6rem; color: rgba(80,120,180,0.7); flex-shrink: 0; }
+
+.view-all { text-align: right; font-size: 0.62rem; color: var(--blue-bright); cursor: none; margin-top: 6px; }
+
+/* Events */
+.events-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 11px;
+  padding: 13px;
+}
+.events-card h4 { font-size: 0.73rem; font-weight: 600; margin-bottom: 10px; }
+
+.evt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 8px;
+  margin-bottom: 7px;
+  transition: border-color 0.2s;
+}
+.evt:hover { border-color: rgba(74,124,255,0.2); }
+.evt-ico { width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.evt-info { flex: 1; min-width: 0; }
+.evt-name { font-size: 0.7rem; font-weight: 500; }
+.evt-date { font-size: 0.59rem; color: rgba(80,120,180,0.7); }
+.badge {
+  padding: 3px 9px;
+  background: rgba(74,124,255,0.12);
+  border: 1px solid rgba(74,124,255,0.22);
+  border-radius: 100px;
+  font-size: 0.58rem; color: var(--blue-bright);
+}
+.evt-count { text-align: right; }
+.evt-num { font-size: 0.82rem; font-weight: 700; display: block; }
+.evt-lbl { font-size: 0.56rem; color: rgba(80,120,180,0.7); }
+
+/* ── FLOATING PHONE + SIGN ── */
+.floating-elements {
+  position: absolute;
+  bottom: -50px; right: -30px;
+  display: flex; align-items: flex-end; gap: 14px;
+  z-index: 10;
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.phone-device {
+  width: 130px;
+  background: linear-gradient(160deg, #0d1b35, #081222);
+  border: 1.5px solid rgba(74,124,255,0.3);
+  border-radius: 26px;
+  padding: 10px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(74,124,255,0.1);
+  position: relative;
+}
+.phone-notch {
+  width: 36px; height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 100px;
+  margin: 0 auto 10px;
+}
+.phone-screen-inner {
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  padding: 12px;
+  min-height: 200px;
+}
+.ph-logo {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.62rem; font-weight: 700; margin-bottom: 10px;
+}
+.ph-logo-ico {
+  width: 14px; height: 14px;
+  background: #3b5ff7; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px;
+}
+.ph-logo em { color: var(--blue-bright); font-style: normal; }
+.ph-scan { font-size: 0.7rem; font-weight: 600; text-align: center; margin-bottom: 10px; }
+
+/* QR code made with SVG */
+.qr-wrap { margin: 0 auto 8px; width: 82px; height: 82px; }
+.ph-hold { font-size: 0.55rem; color: rgba(100,140,200,0.7); text-align: center; margin-bottom: 8px; }
+.ph-check-btn {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, #3b5ff7, #6366f1);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
+  font-size: 16px; color: #fff;
+  box-shadow: 0 0 14px rgba(99,102,241,0.5);
+}
+
+/* Sign standup */
+.sign-card {
+  width: 138px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  color: #0a0f1e;
+  margin-bottom: 8px;
+  position: relative;
+}
+.sign-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0f4ff, #fff);
+}
+.sign-inner { position: relative; }
+.sign-head { font-size: 0.88rem; font-weight: 800; text-align: center; color: #0a0f1e; margin-bottom: 10px; }
+.sign-qr { width: 104px; height: 104px; display: block; margin: 0 auto 8px; }
+.sign-foot { font-size: 0.65rem; color: #445; text-align: center; font-weight: 500; }
+
+/* Plant */
+.plant-decor {
+  position: absolute; bottom: -20px; right: -50px;
+  font-size: 70px; z-index: 3;
+  filter: saturate(0.8) brightness(0.9);
+  animation: plantSway 8s ease-in-out infinite alternate;
+}
+@keyframes plantSway {
+  from { transform: rotate(-3deg); }
+  to   { transform: rotate(3deg); }
+}
+
+/* ── GET STARTED OVERLAY ── */
+#gs-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(3,6,15,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+}
+#gs-overlay.open { display: flex; }
+
+.gs-logo-name {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 3.5rem; font-weight: 800; letter-spacing: -3px;
+  background: linear-gradient(110deg, #fff 30%, #6b9aff 70%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+.gs-sub { font-size: 1rem; color: var(--muted); margin-bottom: 36px; }
+.btn-back {
+  padding: 14px 32px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 100px;
+  font-size: 0.95rem; font-weight: 600; color: var(--white);
+  cursor: none; font-family: 'Satoshi', sans-serif;
+  transition: background 0.2s;
+}
+.btn-back:hover { background: rgba(255,255,255,0.1); }
+
+/* Scroll indicator */
+.scroll-ind {
+  position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+  z-index: 10;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  opacity: 0.4;
+  animation: fadeIn 1s 2s both;
+}
+.scroll-ind span { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, var(--blue-bright), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse {
+  0%,100% { opacity: 0.4; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.1); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 0.4; }
+}
+
+/* Version tag */
+.version-tag {
+  position: fixed; bottom: 20px; right: 24px; z-index: 10;
+  font-size: 0.65rem; color: rgba(100,130,180,0.4);
+  letter-spacing: 0.05em;
+}
+/* ── AUTH MODAL STYLES ── */
+.auth-modal {
+  background: rgba(8, 16, 36, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  text-align: center;
+}
+.form-group { margin-bottom: 16px; text-align: left; }
+.form-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.auth-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 0.9rem;
+  color: var(--white);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.auth-input:focus {
+  border-color: rgba(107, 154, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+.auth-input::placeholder { color: var(--muted); }
+.btn-submit-auth {
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #3b5ff7, #6366f1);
+  border: none;
+  border-radius: 10px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: none; /* Matches your custom cursor */
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  transition: transform 0.2s;
+}
+.btn-submit-auth:hover { transform: translateY(-2px); }
+.auth-switch {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.auth-switch span {
+  color: var(--blue-bright);
+  font-weight: 600;
+  cursor: none;
+}
+.auth-switch span:hover { text-decoration: underline; }
+.btn-close-auth {
+  position: absolute;
+  top: 16px; right: 20px;
+  background: none; border: none;
+  color: var(--muted);
+  font-size: 1.2rem; cursor: none;
+}
+.btn-close-auth:hover { color: var(--white); 
+}
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Particle canvas -->
+<canvas id="canvas"></canvas>
+
+<!-- Ambient orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="#" class="logo">
+    <div class="logo-mark">✓</div>
+    <span class="logo-name">CheckIn<em>IQ</em></span>
+  </a>
+  <div class="nav-pill">
+    <div class="nav-dot"></div>
+    Smart Events. Seamless Check-Ins. ✦
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+
+  <!-- LEFT -->
+  <div class="hero-left">
+    <div class="eyebrow">✦ &nbsp; Event Intelligence Platform</div>
+    <p class="welcome">Welcome to</p>
+    <h1><span class="grad">CheckIn<br>IQ</span></h1>
+    <p class="sub-headline">Smart Event Check-Ins &amp;<br>Attendance Tracking</p>
+    <p class="description">Create events, send QR invitations, track live attendance, and generate powerful analytics — all from one intelligent dashboard.</p>
+
+    <div class="features">
+      <div class="feat">
+        <div class="feat-ico">👥</div>
+        <div>
+          <h4>Manage Guest Lists</h4>
+          <p>Import, organize and manage guests effortlessly.</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-ico">⬛</div>
+        <div>
+          <h4>QR Invitations</h4>
+          <p>Generate unique QR codes and send invites.</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-ico">📲</div>
+        <div>
+          <h4>Live Check-Ins</h4>
+          <p>Scan QR codes and track attendance in real time.</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-ico">📊</div>
+        <div>
+          <h4>Analytics &amp; Reports</h4>
+          <p>Get instant insights and download reports.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-row">
+      <button class="btn-primary" onclick="document.getElementById('gs-overlay').classList.add('open')">
+        Get Started
+        <div class="arrow-circle">→</div>
+      </button>
+      
+    </div>
+  </div>
+
+  <!-- RIGHT: Dashboard -->
+  <div class="hero-right">
+    <div class="dash-shell">
+
+      <!-- Topbar -->
+      <div class="dash-top">
+        <div class="dash-brand">
+          <div class="dash-brand-ico">✓</div>
+          CheckIn<em>IQ</em>
+        </div>
+        <div style="font-size:0.92rem;font-weight:600;">Dashboard</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="dash-create">+ Create Event</div>
+          <span style="font-size:16px;opacity:0.5;">🔔</span>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="dash-body">
+
+        <!-- Sidebar -->
+        <div class="dash-sidebar">
+          <div class="dash-nav">
+            <div class="dnav active"><span class="dnav-ico">⊞</span> Dashboard</div>
+            <div class="dnav"><span class="dnav-ico">📅</span> Events</div>
+            <div class="dnav"><span class="dnav-ico">👤</span> Guests</div>
+            <div class="dnav"><span class="dnav-ico">✓</span> Check-Ins</div>
+            <div class="dnav"><span class="dnav-ico">📈</span> Analytics</div>
+            <div class="dnav"><span class="dnav-ico">📄</span> Reports</div>
+            <div class="dnav"><span class="dnav-ico">⚙</span> Settings</div>
+          </div>
+          <div class="dash-logout">
+            <div class="dnav" style="color:rgba(80,110,160,0.5)"><span class="dnav-ico">↩</span> Logout</div>
+          </div>
+        </div>
+
+        <!-- Main -->
+        <div class="dash-main">
+
+          <!-- Stats -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div>
+                <div class="sc-label">Total Events</div>
+                <div class="sc-val">24</div>
+                <div class="sc-sub">This Month</div>
+              </div>
+              <div class="sc-ico">📅</div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="sc-label">Total Guests</div>
+                <div class="sc-val">1,236</div>
+                <div class="sc-sub">This Month</div>
+              </div>
+              <div class="sc-ico">👥</div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="sc-label">Checked In</div>
+                <div class="sc-val">982</div>
+                <div class="sc-sub g">79.6%</div>
+              </div>
+              <div class="sc-ico" style="color:#10d97a;">✔</div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="sc-label">Pending</div>
+                <div class="sc-val">254</div>
+                <div class="sc-sub o">20.4%</div>
+              </div>
+              <div class="sc-ico" style="color:#ffb830;">⏱</div>
+            </div>
+          </div>
+
+          <!-- Chart + Activity -->
+          <div class="dash-mid">
+            <!-- Chart -->
+            <div class="chart-card">
+              <div class="chart-card-hdr">
+                <span>Attendance Overview</span>
+                <div class="week-btn">This Week ▾</div>
+              </div>
+              <svg class="chart-svg" viewBox="0 0 340 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="cg1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#4a7cff" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#4a7cff" stop-opacity="0"/>
+                  </linearGradient>
+                  <filter id="glow1">
+                    <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                </defs>
+                <!-- Grid -->
+                <line x1="28" y1="8"  x2="338" y2="8"  stroke="rgba(74,124,255,0.08)" stroke-width="1"/>
+                <line x1="28" y1="30" x2="338" y2="30" stroke="rgba(74,124,255,0.08)" stroke-width="1"/>
+                <line x1="28" y1="52" x2="338" y2="52" stroke="rgba(74,124,255,0.08)" stroke-width="1"/>
+                <line x1="28" y1="74" x2="338" y2="74" stroke="rgba(74,124,255,0.08)" stroke-width="1"/>
+                <!-- Y labels -->
+                <text x="22" y="11" text-anchor="end" fill="rgba(74,124,255,0.5)" font-size="7" font-family="sans-serif">1k</text>
+                <text x="22" y="33" text-anchor="end" fill="rgba(74,124,255,0.5)" font-size="7" font-family="sans-serif">750</text>
+                <text x="22" y="55" text-anchor="end" fill="rgba(74,124,255,0.5)" font-size="7" font-family="sans-serif">500</text>
+                <text x="22" y="77" text-anchor="end" fill="rgba(74,124,255,0.5)" font-size="7" font-family="sans-serif">250</text>
+                <!-- Area -->
+                <path d="M32,88 C60,82 78,76 108,68 C138,60 155,73 188,50 C218,30 244,44 278,16 C298,6 318,9 338,8 L338,100 L32,100 Z" fill="url(#cg1)"/>
+                <!-- Line -->
+                <path d="M32,88 C60,82 78,76 108,68 C138,60 155,73 188,50 C218,30 244,44 278,16 C298,6 318,9 338,8" fill="none" stroke="#4a7cff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow1)"/>
+                <!-- Data dots -->
+                <circle cx="108" cy="68" r="3.5" fill="#0b1528" stroke="#4a7cff" stroke-width="2"/>
+                <circle cx="188" cy="50" r="3.5" fill="#0b1528" stroke="#4a7cff" stroke-width="2"/>
+                <circle cx="278" cy="16" r="5" fill="#4a7cff" stroke="#fff" stroke-width="2"/>
+                <!-- Tooltip -->
+                <rect x="234" y="1" width="80" height="28" rx="5" fill="rgba(8,16,36,0.95)" stroke="rgba(74,124,255,0.3)" stroke-width="1"/>
+                <text x="274" y="12" text-anchor="middle" fill="#6b9aff" font-size="7" font-family="sans-serif" font-weight="500">May 14</text>
+                <text x="274" y="23" text-anchor="middle" fill="#fff" font-size="7.5" font-family="sans-serif" font-weight="700">Checked in: 982</text>
+              </svg>
+              <div class="xlabels">
+                <span>May 10</span><span>May 11</span><span>May 12</span><span>May 13</span><span>May 14</span><span>May 15</span><span>May 16</span>
+              </div>
+            </div>
+
+            <!-- Activity -->
+            <div class="act-card">
+              <h4>Check-In Activity</h4>
+              <div class="act-row">
+                <div class="avatar" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">AM</div>
+                <div class="act-info"><div class="act-name">Arjun Mehta</div><div class="act-st">Checked in</div></div>
+                <div class="act-time">10:24 AM</div>
+              </div>
+              <div class="act-row">
+                <div class="avatar" style="background:linear-gradient(135deg,#db2777,#9d174d)">SP</div>
+                <div class="act-info"><div class="act-name">Sneha Patel</div><div class="act-st">Checked in</div></div>
+                <div class="act-time">10:23 AM</div>
+              </div>
+              <div class="act-row">
+                <div class="avatar" style="background:linear-gradient(135deg,#059669,#065f46)">RS</div>
+                <div class="act-info"><div class="act-name">Rohan Shah</div><div class="act-st">Checked in</div></div>
+                <div class="act-time">10:22 AM</div>
+              </div>
+              <div class="act-row">
+                <div class="avatar" style="background:linear-gradient(135deg,#d97706,#92400e)">PV</div>
+                <div class="act-info"><div class="act-name">Priya Verma</div><div class="act-st">Checked in</div></div>
+                <div class="act-time">10:21 AM</div>
+              </div>
+              <div class="view-all">View all</div>
+            </div>
+          </div>
+
+          <!-- Events -->
+          <div class="events-card">
+            <h4>Recent Events</h4>
+            <div class="evt">
+              <div class="evt-ico" style="background:rgba(74,124,255,0.12)">🏢</div>
+              <div class="evt-info"><div class="evt-name">Tech Innovators Summit 2025</div><div class="evt-date">May 20, 2025 · 9:00 AM</div></div>
+              <span class="badge">Upcoming</span>
+              <div class="evt-count"><span class="evt-num">350</span><span class="evt-lbl">Guests</span></div>
+            </div>
+            <div class="evt">
+              <div class="evt-ico" style="background:rgba(124,58,237,0.12)">📣</div>
+              <div class="evt-info"><div class="evt-name">Marketing Conclave 2035</div><div class="evt-date">May 25, 2025 · 10:00 AM</div></div>
+              <span class="badge">Upcoming</span>
+              <div class="evt-count"><span class="evt-num">210</span><span class="evt-lbl">Guests</span></div>
+            </div>
+          </div>
+
+        </div><!-- /dash-main -->
+      </div><!-- /dash-body -->
+    </div><!-- /dash-shell -->
+
+    <!-- Floating Phone + Sign -->
+    <div class="floating-elements">
+
+      <!-- Phone -->
+      <div class="phone-device">
+        <div class="phone-notch"></div>
+        <div class="phone-screen-inner">
+          <div class="ph-logo">
+            <div class="ph-logo-ico">✓</div>
+            CheckIn<em>IQ</em>
+          </div>
+          <div class="ph-scan">Scan QR Code</div>
+          <div class="qr-wrap">
+            <svg viewBox="0 0 82 82" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+              <rect width="82" height="82" fill="white" rx="4"/>
+              <rect x="6" y="6" width="22" height="22" rx="2" fill="#0a0f1e"/>
+              <rect x="10" y="10" width="14" height="14" rx="1" fill="white"/>
+              <rect x="13" y="13" width="8" height="8" fill="#0a0f1e"/>
+              <rect x="54" y="6" width="22" height="22" rx="2" fill="#0a0f1e"/>
+              <rect x="58" y="10" width="14" height="14" rx="1" fill="white"/>
+              <rect x="61" y="13" width="8" height="8" fill="#0a0f1e"/>
+              <rect x="6" y="54" width="22" height="22" rx="2" fill="#0a0f1e"/>
+              <rect x="10" y="58" width="14" height="14" rx="1" fill="white"/>
+              <rect x="13" y="61" width="8" height="8" fill="#0a0f1e"/>
+              <rect x="33" y="6" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="40" y="6" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="47" y="6" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="33" y="14" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="47" y="14" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="37" y="20" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="6" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="14" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="20" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="33" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="40" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="47" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="54" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="61" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="72" y="33" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="6" y="40" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="20" y="40" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="33" y="40" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="47" y="40" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="61" y="40" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="72" y="40" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="6" y="47" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="14" y="47" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="40" y="47" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="54" y="47" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="68" y="47" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="54" y="54" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="61" y="54" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="72" y="54" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="54" y="61" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="68" y="61" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="61" y="68" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="33" y="54" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="40" y="61" width="4" height="4" fill="#0a0f1e"/>
+              <rect x="33" y="68" width="4" height="4" fill="#0a0f1e"/>
+            </svg>
+          </div>
+          <div class="ph-hold">Hold steady to scan</div>
+          <div class="ph-check-btn">✓</div>
+        </div>
+      </div>
+
+      <!-- Sign -->
+      <div class="sign-card">
+        <div class="sign-inner">
+          <div class="sign-head">Check-In Here</div>
+          <svg class="sign-qr" viewBox="0 0 82 82" xmlns="http://www.w3.org/2000/svg">
+            <rect width="82" height="82" fill="white"/>
+            <rect x="6" y="6" width="22" height="22" rx="2" fill="#111"/>
+            <rect x="10" y="10" width="14" height="14" rx="1" fill="white"/>
+            <rect x="13" y="13" width="8" height="8" fill="#111"/>
+            <rect x="54" y="6" width="22" height="22" rx="2" fill="#111"/>
+            <rect x="58" y="10" width="14" height="14" rx="1" fill="white"/>
+            <rect x="61" y="13" width="8" height="8" fill="#111"/>
+            <rect x="6" y="54" width="22" height="22" rx="2" fill="#111"/>
+            <rect x="10" y="58" width="14" height="14" rx="1" fill="white"/>
+            <rect x="13" y="61" width="8" height="8" fill="#111"/>
+            <rect x="33" y="6" width="4" height="4" fill="#111"/>
+            <rect x="40" y="6" width="4" height="4" fill="#111"/>
+            <rect x="33" y="13" width="4" height="4" fill="#111"/>
+            <rect x="47" y="13" width="4" height="4" fill="#111"/>
+            <rect x="6" y="33" width="4" height="4" fill="#111"/>
+            <rect x="13" y="33" width="4" height="4" fill="#111"/>
+            <rect x="20" y="33" width="4" height="4" fill="#111"/>
+            <rect x="33" y="33" width="4" height="4" fill="#111"/>
+            <rect x="47" y="33" width="4" height="4" fill="#111"/>
+            <rect x="61" y="33" width="4" height="4" fill="#111"/>
+            <rect x="68" y="33" width="4" height="4" fill="#111"/>
+            <rect x="6" y="47" width="4" height="4" fill="#111"/>
+            <rect x="20" y="47" width="4" height="4" fill="#111"/>
+            <rect x="33" y="47" width="4" height="4" fill="#111"/>
+            <rect x="54" y="47" width="4" height="4" fill="#111"/>
+            <rect x="68" y="47" width="4" height="4" fill="#111"/>
+            <rect x="54" y="54" width="4" height="4" fill="#111"/>
+            <rect x="61" y="61" width="4" height="4" fill="#111"/>
+            <rect x="68" y="68" width="4" height="4" fill="#111"/>
+            <rect x="33" y="61" width="4" height="4" fill="#111"/>
+            <rect x="40" y="54" width="4" height="4" fill="#111"/>
+          </svg>
+          <div class="sign-foot">Scan your QR code<br>to check-in</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plant -->
+    <div class="plant-decor">🌿</div>
+  </div>
+
+</div><!-- /hero -->
+
+
+<div class="version-tag">v1.0.0— checkiniq.app</div>
+
+<!-- ── GET STARTED OVERLAY ── -->
+<div id="gs-overlay">
+  
+  <div class="auth-modal" id="login-view">
+    <div class="gs-logo-name" style="font-size: 2.5rem; margin-bottom: 8px;">Login</div>
+    <p class="gs-sub" style="margin-bottom: 24px;">Welcome back to your dashboard.</p>
+    
+    <form onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <input type="email" class="auth-input" placeholder="Email ID" required>
+      </div>
+      <div class="form-group">
+        <input type="password" class="auth-input" placeholder="Password" required>
+      </div>
+      <p style="text-align:right;margin-top:-8px;margin-bottom:12px;">
+  <span onclick="showForgotPassword()" 
+        style="font-size:0.8rem;color:#6b9aff;cursor:pointer;">
+    Forgot password?
+  </span>
+</p>
+      <button type="submit" class="btn-submit-auth">Login to Dashboard</button>
+    </form>
+    
+    <p class="auth-switch">Don't have an account? <span onclick="toggleAuthView('register')">Register here</span></p>
+    <button class="btn-close-auth" onclick="document.getElementById('gs-overlay').classList.remove('open')">✕</button>
+  </div>
+     <div class="auth-modal" id="otp-view" style="display: none;">
+    <div class="gs-logo-name" style="font-size: 2.5rem; margin-bottom: 8px;">Verify your email</div>
+    <p class="gs-sub" style="margin-bottom: 24px;">We sent a 6-digit code to <strong id="otp-email-display"></strong>.</p>
+
+    <form onsubmit="handleVerifyOtp(event)">
+      <div class="form-group">
+        <input type="text" class="auth-input" placeholder="Enter 6-digit code" required id="otp-code" maxlength="6" inputmode="numeric" style="text-align:center;letter-spacing:6px;font-size:1.2rem;">
+      </div>
+      <button type="submit" class="btn-submit-auth">Verify & Create Account</button>
+    </form>
+
+    <p class="auth-switch"><span onclick="resendOtp()">Resend code</span> · <span onclick="toggleAuthView('register')">Back</span></p>
+    <button class="btn-close-auth" onclick="document.getElementById('gs-overlay').classList.remove('open')">✕</button>
+  </div>
+
+  <div class="auth-modal" id="register-view" style="display: none;">
+    <div class="gs-logo-name" style="font-size: 2.5rem; margin-bottom: 8px;">Create Account</div>
+    <p class="gs-sub" style="margin-bottom: 24px;">Get started with CheckInIQ.</p>
+    
+    <form onsubmit="handleRegister(event)">
+      <div class="form-row">
+        <input type="text" class="auth-input" placeholder="First Name" required>
+        <input type="text" class="auth-input" placeholder="Last Name" required>
+      </div>
+      <div class="form-group">
+        <input type="email" class="auth-input" placeholder="Enter Email" required>
+      </div>
+      <div class="form-group">
+        <input type="password" class="auth-input" placeholder="Enter New Password" required id="reg-pass">
+      </div>
+      <div class="form-group">
+        <input type="password" class="auth-input" placeholder="Re-enter Password" required id="reg-pass-confirm">
+      </div>
+      <button type="submit" class="btn-submit-auth">Create Account</button>
+    </form>
+    
+    <p class="auth-switch">Already have an account? <span onclick="toggleAuthView('login')">Login here</span></p>
+    <button class="btn-close-auth" onclick="document.getElementById('gs-overlay').classList.remove('open')">✕</button>
+  </div>
+
+</div>
+<script>
+/* ── Custom cursor ── */
+const cur = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cur.style.left = (mx - 5) + 'px';
+  cur.style.top  = (my - 5) + 'px';
+});
+
+(function animRing() {
+  rx += (mx - rx - 18) * 0.12;
+  ry += (my - ry - 18) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top  = ry + 'px';
+  requestAnimationFrame(animRing);
+})();
+
+/* ── Particle canvas ── */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.r = Math.random() * 1.2 + 0.3;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = -Math.random() * 0.4 - 0.1;
+    this.alpha = Math.random() * 0.5 + 0.1;
+    this.life = 0;
+    this.maxLife = Math.random() * 300 + 150;
+    const hue = Math.random() > 0.6 ? '220,150,255' : '74,124,255';
+    this.color = hue;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life++;
+    if (this.life > this.maxLife || this.y < -10) this.reset();
+  }
+  draw() {
+    const progress = this.life / this.maxLife;
+    const fade = progress < 0.1 ? progress * 10 : progress > 0.8 ? (1 - progress) * 5 : 1;
+    ctx.globalAlpha = this.alpha * fade;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgb(${this.color})`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 120; i++) {
+  const p = new Particle();
+  p.life = Math.random() * p.maxLife;
+  particles.push(p);
+}
+
+function drawConnections() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 80) {
+        ctx.globalAlpha = (1 - dist/80) * 0.04;
+        ctx.beginPath();
+        ctx.strokeStyle = '#4a7cff';
+        ctx.lineWidth = 0.5;
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function loop() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => { p.update(); p.draw(); });
+  drawConnections();
+  requestAnimationFrame(loop);
+}
+loop();
+/* ── AUTHENTICATION LOGIC ── */
+// Toggle between Login and Register views
+function toggleAuthView(view) {
+  document.getElementById('login-view').style.display    = view === 'login'    ? 'block' : 'none';
+  document.getElementById('register-view').style.display = view === 'register' ? 'block' : 'none';
+  document.getElementById('otp-view').style.display       = view === 'otp'      ? 'block' : 'none';
+}
+// forgot password 
+function showForgotPassword() {
+  const email = prompt('Enter your registered email address:');
+  if (!email) return;
+
+  fetch('/api/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  }).then(() => {
+    alert('If that email is registered, a reset link has been sent. Check your inbox!');
+  });
+}
+async function handleLogin(e) {
+  e.preventDefault();
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn.disabled) return;
+  submitBtn.disabled = true;
+
+  const email    = e.target[0].value;
+  const password = e.target[1].value;
+
+  try {
+    const res  = await fetch('/api/login',  {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (data.error) { alert(data.error); return; }
+
+    window.location.href = data.redirect || '/dashboard';
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+// Handle Registration Submission
+let pendingRegisterEmail = null;
+
+
+
+async function handleLogin(e) {
+  e.preventDefault();
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn.disabled) return;
+  submitBtn.disabled = true;
+
+  const email    = e.target[0].value;
+  const password = e.target[1].value;
+
+  try {
+    const res  = await fetch('/api/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (data.error) { alert(data.error); return; }
+
+    window.location.href = data.redirect || '/dashboard';
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+
+
+async function handleRegister(e) {
+  e.preventDefault();
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn.disabled) return;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending...';
+
+  try {
+    const pass        = document.getElementById('reg-pass').value;
+    const confirmPass = document.getElementById('reg-pass-confirm').value;
+
+    if (pass !== confirmPass) {
+      alert("Passwords do not match!"); return;
+    }
+
+    const firstName = e.target[0].value;
+    const lastName  = e.target[1].value;
+    const email     = e.target[2].value;
+
+    const res  = await fetch('/api/register/request-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: firstName + ' ' + lastName, email, password: pass })
+    });
+    const data = await res.json();
+
+    if (data.error) { alert(data.error); return; }
+
+    pendingRegisterEmail = email;
+    document.getElementById('otp-email-display').textContent = email;
+    toggleAuthView('otp');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account';
+  }
+}
+async function handleVerifyOtp(e) {
+  e.preventDefault();
+  const otp = document.getElementById('otp-code').value.trim();
+
+  const res  = await fetch('/api/register/verify-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: pendingRegisterEmail, otp })
+  });
+  const data = await res.json();
+
+  if (data.error) { alert(data.error); return; }
+
+  alert('Account verified! Please login.');
+  document.getElementById('otp-code').value = '';
+  pendingRegisterEmail = null;
+  toggleAuthView('login');
+}
+
+function resendOtp() {
+  alert('Please re-check your details and submit the registration form again to get a new code.');
+  toggleAuthView('register');
+}
+</script>
+</body>
+</html>

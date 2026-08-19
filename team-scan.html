@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+<title>CheckIn IQ — Registration Desk</title>
+
+<style>
+
+  :root{
+
+    --bg:#0b0e1a; --card:#131729; --border:#232a45; --text:#eef1ff; --muted:#8891b0;
+
+    --blue:#4a7cff; --green:#10d97a; --red:#ff5252;
+
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+
+    margin:0;
+
+    font-family:'Segoe UI',Inter,Arial,sans-serif;
+
+    background:var(--bg);
+
+    color:var(--text);
+
+    min-height:100vh;
+
+    padding:16px;
+
+  }
+
+  .wrap{
+
+    max-width:460px;
+
+    margin:0 auto;
+
+  }
+
+  header{
+
+    text-align:center;
+
+    margin-bottom:16px;
+
+  }
+
+  header .brand{
+
+    font-size:0.75rem;
+
+    letter-spacing:0.08em;
+
+    color:var(--muted);
+
+    text-transform:uppercase;
+
+  }
+
+  header h1{
+
+    font-size:1.2rem;
+
+    margin:4px 0 2px;
+
+  }
+
+  header .sub{
+
+    font-size:0.78rem;
+
+    color:var(--muted);
+
+  }
+
+  .banner{
+
+    padding:10px 14px;
+
+    border-radius:10px;
+
+    font-size:0.8rem;
+
+    text-align:center;
+
+    margin-bottom:14px;
+
+    display:none;
+
+  }
+
+  .banner.show{
+
+    display:block;
+
+  }
+
+  .banner.warn{
+
+    background:rgba(255,82,82,0.12);
+
+    color:var(--red);
+
+    border:1px solid rgba(255,82,82,0.3);
+
+  }
+
+  .tabs{
+
+    display:flex;
+
+    gap:8px;
+
+    margin-bottom:14px;
+
+  }
+
+  .tab{
+
+    flex:1;
+
+    padding:10px;
+
+    border-radius:9px;
+
+    border:1px solid var(--border);
+
+    background:var(--card);
+
+    color:var(--muted);
+
+    text-align:center;
+
+    font-size:0.82rem;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+  }
+
+  .tab.active{
+
+    background:var(--blue);
+
+    color:#fff;
+
+    border-color:var(--blue);
+
+  }
+
+  .card{
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    border-radius:14px;
+
+    padding:18px;
+
+    margin-bottom:14px;
+
+  }
+
+  .card h3{
+
+    margin:0 0 12px;
+
+    font-size:0.85rem;
+
+  }
+
+  video{
+
+    width:100%;
+
+    border-radius:12px;
+
+    background:#000;
+
+    aspect-ratio:1/1;
+
+    object-fit:cover;
+
+  }
+
+  .video-wrap{
+
+    position:relative;
+
+  }
+
+  .corner{
+
+    position:absolute;
+
+    width:26px;
+
+    height:26px;
+
+    border-color:var(--blue);
+
+    pointer-events:none;
+
+  }
+
+  .c-tl{
+
+    top:8px;
+
+    left:8px;
+
+    border-top:3px solid;
+
+    border-left:3px solid;
+
+    border-radius:6px 0 0 0;
+
+  }
+
+  .c-tr{
+
+    top:8px;
+
+    right:8px;
+
+    border-top:3px solid;
+
+    border-right:3px solid;
+
+    border-radius:0 6px 0 0;
+
+  }
+
+  .c-bl{
+
+    bottom:8px;
+
+    left:8px;
+
+    border-bottom:3px solid;
+
+    border-left:3px solid;
+
+    border-radius:0 0 0 6px;
+
+  }
+
+  .c-br{
+
+    bottom:8px;
+
+    right:8px;
+
+    border-bottom:3px solid;
+
+    border-right:3px solid;
+
+    border-radius:0 0 6px 0;
+
+  }
+
+  .qr-label{
+
+    text-align:center;
+
+    font-size:0.78rem;
+
+    color:var(--muted);
+
+    margin:10px 0;
+
+  }
+
+  .qr-result{
+
+    padding:10px;
+
+    border-radius:9px;
+
+    font-size:0.85rem;
+
+    font-weight:600;
+
+    text-align:center;
+
+    display:none;
+
+    margin-bottom:10px;
+
+  }
+
+  button.btn{
+
+    width:100%;
+
+    padding:12px;
+
+    border:none;
+
+    border-radius:10px;
+
+    font-size:0.85rem;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    font-family:inherit;
+
+  }
+
+  .btn-blue{
+
+    background:linear-gradient(135deg,#4a7cff,#3457d5);
+
+    color:#fff;
+
+  }
+
+  .btn-green{
+
+    background:linear-gradient(135deg,#10d97a,#059669);
+
+    color:#fff;
+
+  }
+
+  .btn-ghost{
+
+    background:transparent;
+
+    border:1px solid var(--border);
+
+    color:var(--text);
+
+  }
+
+  input{
+
+    width:100%;
+
+    padding:11px;
+
+    border-radius:9px;
+
+    border:1px solid var(--border);
+
+    background:#0d1126;
+
+    color:var(--text);
+
+    font-size:0.85rem;
+
+    margin-bottom:10px;
+
+    font-family:inherit;
+
+  }
+
+  input:focus{
+
+    outline:none;
+
+    border-color:var(--blue);
+
+  }
+
+  .label{
+
+    font-size:0.72rem;
+
+    color:var(--muted);
+
+    margin-bottom:5px;
+
+    display:block;
+
+  }
+
+  .guest-row{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    padding:10px;
+
+    border:1px solid var(--border);
+
+    border-radius:9px;
+
+    margin-bottom:8px;
+
+  }
+
+  .guest-row .gname{
+
+    font-size:0.82rem;
+
+    font-weight:600;
+
+  }
+
+  .guest-row .gemail{
+
+    font-size:0.72rem;
+
+    color:var(--muted);
+
+  }
+
+  .guest-row button{
+
+    padding:7px 12px;
+
+    font-size:0.72rem;
+
+    border-radius:7px;
+
+    border:none;
+
+    background:var(--green);
+
+    color:#fff;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    white-space:nowrap;
+
+  }
+
+  .guest-row button:disabled{
+
+    background:var(--border);
+
+    color:var(--muted);
+
+  }
+
+  .hint{
+
+    font-size:0.72rem;
+
+    color:var(--muted);
+
+    margin-top:8px;
+
+    text-align:center;
+
+  }
+
+  .hidden{
+
+    display:none !important;
+
+  }
+
+</style>
+
+</head>
+
+<body>
+
+<div class="wrap">
+
+  <header>
+
+    <div class="brand">CheckIn IQ — Registration Desk</div>
+
+    <h1 id="event-name">Loading event…</h1>
+
+    <div class="sub" id="event-meta"></div>
+
+  </header>
+
+
+
+  <div class="banner warn" id="closed-banner"></div>
+
+
+
+  <div class="tabs">
+
+    <div class="tab active" id="tab-scan" onclick="switchTab('scan')">
+
+      📷 Scan QR
+
+    </div>
+
+    <div class="tab" id="tab-manual" onclick="switchTab('manual')">
+
+      ✍️ Manual
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ============================================================
+       SCAN TAB
+  ============================================================ -->
+
+  <div id="panel-scan">
+
+    <div class="card">
+
+      <h3>QR Code Scanner</h3>
+
+      <div class="video-wrap">
+
+        <video id="qr-video" playsinline></video>
+
+        <div class="corner c-tl"></div>
+
+        <div class="corner c-tr"></div>
+
+        <div class="corner c-bl"></div>
+
+        <div class="corner c-br"></div>
+
+      </div>
+
+      <div class="qr-result" id="qr-result"></div>
+
+      <div class="qr-label" id="qr-status-label">
+
+        Tap below to start scanning
+
+      </div>
+
+      <button
+
+        class="btn btn-blue"
+
+        id="qr-toggle-btn"
+
+        onclick="toggleScanner()"
+
+      >
+
+        Activate Scanner
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ============================================================
+       MANUAL TAB
+  ============================================================ -->
+
+  <div id="panel-manual" class="hidden">
+
+    <div class="card">
+
+      <h3>Find a Guest</h3>
+
+      <label class="label">
+
+        Search by name or email
+
+      </label>
+
+      <input
+
+        id="search-box"
+
+        placeholder="e.g. Arjun Mehta or arjun@..."
+
+        oninput="onSearchInput()"
+
+      >
+
+      <div id="search-results"></div>
+
+    </div>
+
+
+
+    <div class="card">
+
+      <h3>Not on the list? Add a walk-in</h3>
+
+      <label class="label">
+
+        Full name
+
+      </label>
+
+      <input
+
+        id="wk-name"
+
+        placeholder="Guest's name"
+
+      >
+
+      <label class="label">
+
+        Email
+
+      </label>
+
+      <input
+
+        id="wk-email"
+
+        placeholder="guest@email.com"
+
+      >
+
+      <button
+
+        class="btn btn-green"
+
+        onclick="addWalkin()"
+
+      >
+
+        ✓ Add &amp; Check In
+
+      </button>
+
+      <div class="hint">
+
+        This adds them to the guest list and checks them in right away.
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<script>
+
+/* ============================================================
+   TEAM ACCESS URL
+   /team/scan/<event_id>/<token>
+============================================================ */
+
+const parts = location.pathname
+  .split('/')
+  .filter(Boolean);
+
+const EVENT_ID = parseInt(parts[2], 10);
+
+const TOKEN = parts[3];
+
+let checkinAllowed = true;
+
+
+
+/* ============================================================
+   LOAD EVENT INFORMATION
+============================================================ */
+
+async function loadEventInfo() {
+
+  try {
+
+    const res = await fetch(
+      `/api/team/event-info?event_id=${EVENT_ID}&token=${encodeURIComponent(TOKEN)}`
+    );
+
+    const data = await res.json();
+
+
+    if (!res.ok || data.error) {
+
+      document.getElementById('event-name').textContent =
+        'Invalid link';
+
+      document.getElementById('event-meta').textContent =
+        'Ask the organizer to generate a new team link.';
+
+      document.getElementById('panel-scan').classList.add('hidden');
+
+      document.getElementById('panel-manual').classList.add('hidden');
+
+      return;
+
+    }
+
+
+    document.getElementById('event-name').textContent =
+      data.name;
+
+
+    document.getElementById('event-meta').textContent =
+      [data.date, data.location]
+        .filter(Boolean)
+        .join(' • ');
+
+
+    checkinAllowed =
+      data.checkin_allowed !== false;
+
+
+    const banner =
+      document.getElementById('closed-banner');
+
+
+    if (!checkinAllowed) {
+
+      banner.textContent =
+        data.checkin_reason ||
+        'Check-in is currently closed for this event.';
+
+      banner.classList.add('show');
+
+    }
+
+  }
+
+  catch(e) {
+
+    console.error(
+      'Event info error:',
+      e
+    );
+
+    document.getElementById('event-name').textContent =
+      'Could not load event';
+
+    document.getElementById('event-meta').textContent =
+      'Server not reachable';
+
+  }
+
+}
+
+
+loadEventInfo();
+
+
+
+/* ============================================================
+   TABS
+============================================================ */
+
+function switchTab(tab) {
+
+  document
+    .getElementById('tab-scan')
+    .classList.toggle(
+      'active',
+      tab === 'scan'
+    );
+
+
+  document
+    .getElementById('tab-manual')
+    .classList.toggle(
+      'active',
+      tab === 'manual'
+    );
+
+
+  document
+    .getElementById('panel-scan')
+    .classList.toggle(
+      'hidden',
+      tab !== 'scan'
+    );
+
+
+  document
+    .getElementById('panel-manual')
+    .classList.toggle(
+      'hidden',
+      tab !== 'manual'
+    );
+
+
+  if (tab !== 'scan') {
+
+    stopScanner();
+
+  }
+
+}
+
+
+
+/* ============================================================
+   QR SCANNER
+============================================================ */
+
+let scannerActive = false;
+
+let scannerStream = null;
+
+let scannerTimer = null;
+
+
+
+function loadScript(src) {
+
+  return new Promise((resolve, reject) => {
+
+    const s =
+      document.createElement('script');
+
+    s.src = src;
+
+    s.onload = resolve;
+
+    s.onerror = reject;
+
+    document.head.appendChild(s);
+
+  });
+
+}
+
+
+
+async function toggleScanner() {
+
+  if (scannerActive) {
+
+    stopScanner();
+
+  }
+
+  else {
+
+    startScanner();
+
+  }
+
+}
+
+
+
+async function startScanner() {
+
+  if (!checkinAllowed) {
+
+    showResult(
+      false,
+      '⚠️ Check-in is currently closed.'
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    if (!window.jsQR) {
+
+      await loadScript(
+        'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'
+      );
+
+    }
+
+
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video: {
+          facingMode: 'environment'
+        }
+
+      });
+
+
+    scannerStream = stream;
+
+
+    const video =
+      document.getElementById('qr-video');
+
+
+    video.srcObject = stream;
+
+    await video.play();
+
+
+    scannerActive = true;
+
+
+    document
+      .getElementById('qr-toggle-btn')
+      .textContent =
+        '⏹ Stop Scanner';
+
+
+    document
+      .getElementById('qr-status-label')
+      .textContent =
+        'Scanning… hold QR code steady';
+
+
+    document
+      .getElementById('qr-result')
+      .style.display =
+        'none';
+
+
+    scannerTimer =
+      setInterval(
+        scanFrame,
+        300
+      );
+
+  }
+
+  catch(err) {
+
+    console.error(
+      'Camera error:',
+      err
+    );
+
+    document
+      .getElementById('qr-status-label')
+      .textContent =
+        '❌ Camera access denied';
+
+  }
+
+}
+
+
+
+function stopScanner() {
+
+  if (scannerStream) {
+
+    scannerStream
+      .getTracks()
+      .forEach(
+        t => t.stop()
+      );
+
+  }
+
+
+  clearInterval(scannerTimer);
+
+
+  scannerActive = false;
+
+
+  document
+    .getElementById('qr-toggle-btn')
+    .textContent =
+      'Activate Scanner';
+
+
+  document
+    .getElementById('qr-status-label')
+    .textContent =
+      'Tap below to start scanning';
+
+
+  const video =
+    document.getElementById('qr-video');
+
+
+  if (video) {
+
+    video.srcObject = null;
+
+  }
+
+}
+
+
+
+function scanFrame() {
+
+  const video =
+    document.getElementById('qr-video');
+
+
+  if (
+    !video ||
+    video.readyState !==
+      video.HAVE_ENOUGH_DATA
+  ) {
+
+    return;
+
+  }
+
+
+  const canvas =
+    document.createElement('canvas');
+
+
+  canvas.width =
+    video.videoWidth;
+
+
+  canvas.height =
+    video.videoHeight;
+
+
+  const ctx =
+    canvas.getContext('2d');
+
+
+  ctx.drawImage(
+    video,
+    0,
+    0
+  );
+
+
+  const img =
+    ctx.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+  const code =
+    jsQR(
+      img.data,
+      img.width,
+      img.height
+    );
+
+
+  if (code) {
+
+    clearInterval(scannerTimer);
+
+    processQR(code.data);
+
+  }
+
+}
+
+
+
+/* ============================================================
+   QR VERIFICATION
+============================================================ */
+
+async function processQR(qrData) {
+
+  document
+    .getElementById('qr-status-label')
+    .textContent =
+      'Processing…';
+
+
+  if (
+    !qrData.startsWith(
+      'CHECKINIQ|'
+    )
+  ) {
+
+    showResult(
+      false,
+      '❌ Not a CheckInIQ QR code'
+    );
+
+
+    setTimeout(
+      resumeScanner,
+      1800
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const res =
+      await fetch(
+        '/api/team/verify-qr',
+        {
+
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+
+            event_id:
+              EVENT_ID,
+
+            token:
+              TOKEN,
+
+            qr_data:
+              qrData
+
+          })
+
+        }
+      );
+
+
+    const data =
+      await res.json();
+
+
+    if (data.valid) {
+
+      showResult(
+        true,
+        `✅ Welcome, ${data.name}!`
+      );
+
+    }
+
+    else if (data.already) {
+
+      showResult(
+        false,
+        `⚠️ ${data.name} already checked in!`
+      );
+
+    }
+
+    else {
+
+      showResult(
+        false,
+        `❌ ${
+          data.message ||
+          'Check-in failed'
+        }`
+      );
+
+    }
+
+  }
+
+  catch(err) {
+
+    console.error(
+      'QR verification error:',
+      err
+    );
+
+    showResult(
+      false,
+      '❌ Server not reachable'
+    );
+
+  }
+
+
+  setTimeout(() => {
+
+    const result =
+      document.getElementById(
+        'qr-result'
+      );
+
+    result.style.display =
+      'none';
+
+
+    document
+      .getElementById(
+        'qr-status-label'
+      )
+      .textContent =
+        'Scanning…';
+
+
+    if (scannerActive) {
+
+      scannerTimer =
+        setInterval(
+          scanFrame,
+          300
+        );
+
+    }
+
+  }, 2500);
+
+}
+
+
+
+function showResult(
+  success,
+  message
+) {
+
+  const el =
+    document.getElementById(
+      'qr-result'
+    );
+
+
+  el.textContent =
+    message;
+
+
+  el.style.display =
+    'block';
+
+
+  el.style.background =
+    success
+      ? 'rgba(16,217,122,0.12)'
+      : 'rgba(255,82,82,0.12)';
+
+
+  el.style.color =
+    success
+      ? 'var(--green)'
+      : 'var(--red)';
+
+
+  el.style.border =
+    success
+      ? '1px solid rgba(16,217,122,0.3)'
+      : '1px solid rgba(255,82,82,0.3)';
+
+}
+
+
+
+/* ============================================================
+   MANUAL SEARCH
+============================================================ */
+
+let searchTimer = null;
+
+
+
+function onSearchInput() {
+
+  clearTimeout(
+    searchTimer
+  );
+
+
+  searchTimer =
+    setTimeout(
+      runSearch,
+      250
+    );
+
+}
+
+
+
+async function runSearch() {
+
+  const q =
+    document
+      .getElementById(
+        'search-box'
+      )
+      .value
+      .trim();
+
+
+  const box =
+    document.getElementById(
+      'search-results'
+    );
+
+
+  if (!q) {
+
+    box.innerHTML = '';
+
+    return;
+
+  }
+
+
+  try {
+
+    const res =
+      await fetch(
+        `/api/team/guests?event_id=${EVENT_ID}&token=${encodeURIComponent(TOKEN)}&q=${encodeURIComponent(q)}`
+      );
+
+
+    const data =
+      await res.json();
+
+
+    if (!res.ok) {
+
+      box.innerHTML =
+        '<div class="hint">Search unavailable.</div>';
+
+      return;
+
+    }
+
+
+    if (!data.length) {
+
+      box.innerHTML =
+        '<div class="hint">No matches — try the walk-in form below.</div>';
+
+      return;
+
+    }
+
+
+    box.innerHTML =
+      data.map(g => `
+
+        <div class="guest-row">
+
+          <div>
+
+            <div class="gname">
+              ${escapeHtml(g.name)}
+            </div>
+
+            <div class="gemail">
+              ${escapeHtml(g.email)}
+            </div>
+
+          </div>
+
+
+          <button
+
+            ${g.status === 'checked_in'
+              ? 'disabled'
+              : ''}
+
+            onclick="checkinEmail(
+              '${escapeAttr(g.email)}',
+              this
+            )"
+
+          >
+
+            ${
+              g.status === 'checked_in'
+                ? '✓ In'
+                : 'Check In'
+            }
+
+          </button>
+
+        </div>
+
+      `).join('');
+
+  }
+
+  catch(e) {
+
+    console.error(
+      'Guest search error:',
+      e
+    );
+
+    box.innerHTML =
+      '<div class="hint">Search failed.</div>';
+
+  }
+
+}
+
+
+
+/* ============================================================
+   MANUAL CHECK-IN
+============================================================ */
+
+async function checkinEmail(
+  email,
+  btnEl
+) {
+
+  if (!checkinAllowed) {
+
+    alert(
+      'Check-in is currently closed.'
+    );
+
+    return;
+
+  }
+
+
+  btnEl.disabled = true;
+
+  btnEl.textContent = '…';
+
+
+  try {
+
+    const res =
+      await fetch(
+        '/api/team/checkin',
+        {
+
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+
+            event_id:
+              EVENT_ID,
+
+            token:
+              TOKEN,
+
+            email:
+              email
+
+          })
+
+        }
+      );
+
+
+    const data =
+      await res.json();
+
+
+    if (data.success) {
+
+      btnEl.textContent =
+        '✓ In';
+
+
+    }
+
+    else {
+
+      btnEl.disabled = false;
+
+      btnEl.textContent =
+        'Check In';
+
+
+      alert(
+        data.message ||
+        data.error ||
+        'Failed'
+      );
+
+    }
+
+  }
+
+  catch(e) {
+
+    console.error(
+      'Manual check-in error:',
+      e
+    );
+
+    btnEl.disabled = false;
+
+    btnEl.textContent =
+      'Check In';
+
+
+    alert(
+      'Server not reachable'
+    );
+
+  }
+
+}
+
+
+
+/* ============================================================
+   WALK-IN
+============================================================ */
+
+async function addWalkin() {
+
+  if (!checkinAllowed) {
+
+    alert(
+      'Check-in is currently closed.'
+    );
+
+    return;
+
+  }
+
+
+  const name =
+    document
+      .getElementById('wk-name')
+      .value
+      .trim();
+
+
+  const email =
+    document
+      .getElementById('wk-email')
+      .value
+      .trim();
+
+
+  if (!name || !email) {
+
+    alert(
+      'Enter both name and email'
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const res =
+      await fetch(
+        '/api/team/checkin',
+        {
+
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+
+            event_id:
+              EVENT_ID,
+
+            token:
+              TOKEN,
+
+            email:
+              email,
+
+            name:
+              name,
+
+            walkin:
+              true
+
+          })
+
+        }
+      );
+
+
+    const data =
+      await res.json();
+
+
+    if (data.success) {
+
+      alert(
+        `✅ ${data.name} checked in!`
+      );
+
+
+      document
+        .getElementById(
+          'wk-name'
+        )
+        .value = '';
+
+
+      document
+        .getElementById(
+          'wk-email'
+        )
+        .value = '';
+
+
+    }
+
+    else {
+
+      alert(
+        data.message ||
+        data.error ||
+        'Failed'
+      );
+
+    }
+
+  }
+
+  catch(e) {
+
+    console.error(
+      'Walk-in error:',
+      e
+    );
+
+    alert(
+      'Server not reachable'
+    );
+
+  }
+
+}
+
+
+
+/* ============================================================
+   HTML ESCAPING
+============================================================ */
+
+function escapeHtml(value) {
+
+  return String(
+    value || ''
+  )
+    .replace(
+      /&/g,
+      '&amp;'
+    )
+    .replace(
+      /</g,
+      '&lt;'
+    )
+    .replace(
+      />/g,
+      '&gt;'
+    )
+    .replace(
+      /"/g,
+      '&quot;'
+    )
+    .replace(
+      /'/g,
+      '&#039;'
+    );
+
+}
+
+
+
+function escapeAttr(value) {
+
+  return String(
+    value || ''
+  )
+    .replace(
+      /\\/g,
+      '\\\\'
+    )
+    .replace(
+      /'/g,
+      "\\'"
+    )
+    .replace(
+      /"/g,
+      '&quot;'
+    );
+
+}
+
+</script>
+
+</body>
+
+</html>
